@@ -1,0 +1,34 @@
+trigger trgApp on Application__c (after insert, after update, after delete) {
+    
+    //extract Positionid of the affected applications that are inserted or updated or deleted
+    Set<id> positionid = new Set<id>();
+    
+    
+    if((Trigger.isInsert || Trigger.isUpdate) && Trigger.isAfter){
+        for(Application__c a : Trigger.new){
+            positionid.add(a.Position__c);
+        }
+    }
+        
+    if(Trigger.isDelete){
+        for(Application__c a : Trigger.old){
+            positionid.add(a.Position__c);
+        }
+    }
+    
+    //create a map to store the related Position record
+    Map<id,Position__c> relPos = new Map<id,Position__c>([select NosApps__c from Position__c where id in :positionid]);
+    List<Position__c> pcs = [select name, NosApps__c, (select name from Applications__r) from Position__c];
+    
+    List<Position__c> posToUpdate = new List<Position__c>();
+    
+    //extract number of applications against the Position record
+    //update the field with the number of applications
+    for(Position__c p : pcs){
+        relPos.get(p.Id).NosApps__c = p.applications__r.size();
+        posToUpdate.add(relPos.get(p.Id));
+    }
+    
+    update posToUpdate;
+    
+}
